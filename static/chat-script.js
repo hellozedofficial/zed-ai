@@ -224,24 +224,37 @@ async function loadSession(sessionId, shareHash) {
 }
 
 // Delete session
-async function deleteSession(event, sessionId) {
+let pendingDeleteSessionId = null;
+
+function deleteSession(event, sessionId) {
     event.stopPropagation();
-    
-    if (!confirm('Delete this conversation?')) return;
+    pendingDeleteSessionId = sessionId;
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    pendingDeleteSessionId = null;
+}
+
+async function confirmDelete() {
+    if (!pendingDeleteSessionId) return;
     
     try {
-        const response = await fetch(`/api/sessions/${sessionId}`, {
+        const response = await fetch(`/api/sessions/${pendingDeleteSessionId}`, {
             method: 'DELETE'
         });
         
         if (response.ok) {
-            if (currentSessionId === sessionId) {
+            if (currentSessionId === pendingDeleteSessionId) {
                 startNewChat();
             }
             await loadSessions();
         }
     } catch (error) {
         console.error('Failed to delete session:', error);
+    } finally {
+        closeDeleteModal();
     }
 }
 
