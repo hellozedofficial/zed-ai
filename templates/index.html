@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZED - AI Chat Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <button id="newChatBtn" class="new-chat-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    New Chat
+                </button>
+            </div>
+            
+            <div class="chat-history" id="chatHistory">
+                <!-- Chat history will be populated here -->
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="model-selector">
+                    <label for="modelSelect">Model:</label>
+                    <select id="modelSelect">
+                        <option value="amazon.nova-pro-v1:0">Claude 3 Sonnet</option>
+                        <option value="anthropic.claude-3-haiku-20240307-v1:0">Claude 3 Haiku</option>
+                        <option value="anthropic.claude-3-opus-20240229-v1:0">Claude 3 Opus</option>
+                    </select>
+                </div>
+                
+                <button onclick="exportConversation()" class="export-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Export Chat
+                </button>
+                
+                <div class="shortcuts-hint">
+                    <div><kbd>Ctrl</kbd>+<kbd>Enter</kbd> Send</div>
+                    <div><kbd>Ctrl</kbd>+<kbd>K</kbd> New Chat</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="main-content">
+            <div class="chat-header">
+                <h1>ZED</h1>
+                <p class="subtitle">Powered by HelloZed</p>
+            </div>
+
+            <div class="chat-container" id="chatContainer">
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </div>
+                    <h2>Welcome to ZED!</h2>
+                    <p>How can I help you today?</p>
+                    
+                    <div class="example-prompts">
+                        <div class="example-prompt" onclick="useExample('How do I build a REST API in Python?')">
+                            <h4>💻 Programming</h4>
+                            <p>How do I build a REST API in Python?</p>
+                        </div>
+                        <div class="example-prompt" onclick="useExample('Write me an interesting story')">
+                            <h4>📖 Creative Writing</h4>
+                            <p>Write me an interesting story</p>
+                        </div>
+                        <div class="example-prompt" onclick="useExample('What is Machine Learning and how do I get started?')">
+                            <h4>🎓 Learning</h4>
+                            <p>What is Machine Learning and how do I get started?</p>
+                        </div>
+                        <div class="example-prompt" onclick="useExample('What do I need to build a website?')">
+                            <h4>🚀 Technology</h4>
+                            <p>What do I need to build a website?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="messages" id="messages">
+                    <!-- Messages will be dynamically added here -->
+                </div>
+            </div>
+
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="userInput" 
+                        placeholder="Type your message here..." 
+                        rows="1"
+                    ></textarea>
+                    <button id="sendBtn" class="send-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <div class="input-footer">
+                    <span class="powered-by">Powered by Amazon Bedrock</span>
+                    <div class="shortcuts-hint">
+                        Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to send • <kbd>Ctrl</kbd>+<kbd>K</kbd> for new chat
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

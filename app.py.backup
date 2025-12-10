@@ -1,0 +1,271 @@
+from flask import Flask, request, jsonify, render_template, abort
+from flask_cors import CORS
+import boto3
+import json
+import os
+import logging
+import time
+from typing import Dict, List, Optional
+from botocore.exceptions import ClientError, NoCredentialsError
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+
+# Security configurations
+app.config.update(
+    SECRET_KEY=os.getenv('SECRET_KEY', 'dev-key-change-in-production'),
+    MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max request size
+    JSON_AS_ASCII=False  # Support Unicode in JSON responses
+)
+
+CORS(app, origins=os.getenv('ALLOWED_ORIGINS', '*').split(','))
+
+# Configuration
+MAX_MESSAGE_LENGTH = int(os.getenv('MAX_MESSAGE_LENGTH', '4000'))
+MAX_HISTORY_LENGTH = int(os.getenv('MAX_HISTORY_LENGTH', '20'))
+REQUEST_TIMEOUT = int(os.getenv('REQUEST_TIMEOUT', '30'))
+
+# Rate limiting (simple in-memory store)
+request_timestamps = {}
+RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', '10'))
+
+# Allowed models for security
+ALLOWED_MODELS = {
+    'amazon.nova-pro-v1:0',
+    'anthropic.claude-3-haiku-20240307-v1:0',
+    'anthropic.claude-3-opus-20240229-v1:0',
+    'anthropic.claude-v2:1',
+    'meta.llama3-70b-instruct-v1:0'
+}
+
+# Initialize AWS Bedrock client with error handling
+try:
+    bedrock_runtime = boto3.client(
+        service_name='bedrock-runtime',
+        region_name=os.getenv('AWS_REGION', 'us-east-1'),
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        config=boto3.session.Config(
+            retries={'max_attempts': 3},
+            connect_timeout=REQUEST_TIMEOUT,
+            read_timeout=REQUEST_TIMEOUT
+        )
+    )
+    logger.info("AWS Bedrock client initialized successfully")
+except (NoCredentialsError, Exception) as e:
+    logger.error(f"Failed to initialize AWS Bedrock client: {e}")
+    bedrock_runtime = None
+
+# Model ID - using Claude 3 Sonnet by default
+MODEL_ID = os.getenv('BEDROCK_MODEL_ID', 'amazon.nova-pro-v1:0')
+
+@app.route('/')
+def index():
+    """Serve the main chat interface"""
+    return render_template('index.html')
+
+def validate_rate_limit(client_ip: str) -> bool:
+    """Simple rate limiting based on client IP"""
+    current_time = time.time()
+    
+    # Clean old timestamps
+    cutoff_time = current_time - 60  # 1 minute ago
+    if client_ip in request_timestamps:
+        request_timestamps[client_ip] = [
+            ts for ts in request_timestamps[client_ip]
+            if ts > cutoff_time
+        ]
+    else:
+        request_timestamps[client_ip] = []
+    
+    # Check rate limit
+    if len(request_timestamps[client_ip]) >= RATE_LIMIT_PER_MINUTE:
+        return False
+    
+    # Add current request
+    request_timestamps[client_ip].append(current_time)
+    return True
+
+def validate_input(data: Dict) -> Optional[str]:
+    """Validate input data and return error message if invalid"""
+    if not isinstance(data, dict):
+        return "Invalid request format"
+    
+    user_message = data.get('message', '').strip()
+    if not user_message:
+        return "Message is required"
+    
+    if len(user_message) > MAX_MESSAGE_LENGTH:
+        return f"Message too long (max {MAX_MESSAGE_LENGTH} characters)"
+    
+    history = data.get('history', [])
+    if not isinstance(history, list):
+        return "History must be an array"
+    
+    if len(history) > MAX_HISTORY_LENGTH:
+        return f"Conversation history too long (max {MAX_HISTORY_LENGTH} messages)"
+    
+    # Validate history format
+    for i, msg in enumerate(history):
+        if not isinstance(msg, dict):
+            return f"History message {i} must be an object"
+        if 'role' not in msg or 'content' not in msg:
+            return f"History message {i} missing required fields"
+        if msg['role'] not in ['user', 'assistant']:
+            return f"Invalid role in history message {i}"
+    
+    model = data.get('model', MODEL_ID)
+    if model not in ALLOWED_MODELS:
+        return "Invalid model specified"
+    
+    return None
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """Handle chat requests and interact with AWS Bedrock"""
+    start_time = time.time()
+    client_ip = request.environ.get('REMOTE_ADDR', 'unknown')
+    
+    try:
+        # Check if Bedrock client is available
+        if bedrock_runtime is None:
+            logger.error("Bedrock client not available")
+            return jsonify({'error': 'Service temporarily unavailable'}), 503
+        
+        # Rate limiting
+        if not validate_rate_limit(client_ip):
+            logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+            return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
+        
+        # Get and validate input
+        try:
+            data = request.get_json()
+            if data is None:
+                return jsonify({'error': 'Invalid JSON'}), 400
+        except Exception:
+            return jsonify({'error': 'Invalid JSON format'}), 400
+        
+        # Validate input
+        validation_error = validate_input(data)
+        if validation_error:
+            logger.warning(f"Input validation failed: {validation_error}")
+            return jsonify({'error': validation_error}), 400
+        
+        user_message = data['message'].strip()
+        conversation_history = data.get('history', [])
+        model_id = data.get('model', MODEL_ID)
+        
+        logger.info(f"Chat request from {client_ip}, message length: {len(user_message)}, history length: {len(conversation_history)}")
+        
+        # Prepare messages for Claude
+        messages = []
+        
+        # Add conversation history
+        for msg in conversation_history:
+            messages.append({
+                'role': msg['role'],
+                'content': msg['content']
+            })
+        
+        # Add current user message
+        messages.append({
+            'role': 'user',
+            'content': user_message
+        })
+        
+        # Prepare request body for Bedrock
+        request_body = {
+            'anthropic_version': 'bedrock-2023-05-31',
+            'max_tokens': 4096,
+            'messages': messages,
+            'temperature': 0.7,
+            'top_p': 0.9
+        }
+        
+        # Call Bedrock API
+        try:
+            response = bedrock_runtime.invoke_model(
+                modelId=model_id,
+                body=json.dumps(request_body)
+            )
+            
+            # Parse response
+            response_body = json.loads(response['body'].read())
+            assistant_message = response_body['content'][0]['text']
+            
+            processing_time = time.time() - start_time
+            logger.info(f"Chat request completed in {processing_time:.2f}s")
+            
+            return jsonify({
+                'response': assistant_message,
+                'model': model_id
+            })
+            
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            logger.error(f"AWS Bedrock error: {error_code} - {e}")
+            
+            if error_code == 'AccessDeniedException':
+                return jsonify({'error': 'Access denied. Please check your AWS permissions.'}), 403
+            elif error_code == 'ThrottlingException':
+                return jsonify({'error': 'Service is busy. Please try again later.'}), 429
+            elif error_code == 'ValidationException':
+                return jsonify({'error': 'Invalid request format.'}), 400
+            else:
+                return jsonify({'error': 'External service error. Please try again.'}), 502
+        
+    except Exception as e:
+        logger.error(f"Unexpected error in chat endpoint: {str(e)}", exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred. Please try again.'}), 500
+
+@app.route('/api/models', methods=['GET'])
+def get_models():
+    """Return available Bedrock models"""
+    models = [
+        {
+            'id': 'amazon.nova-pro-v1:0',
+            'name': 'Claude 3 Sonnet',
+            'provider': 'Anthropic'
+        },
+        {
+            'id': 'anthropic.claude-3-haiku-20240307-v1:0',
+            'name': 'Claude 3 Haiku',
+            'provider': 'Anthropic'
+        },
+        {
+            'id': 'anthropic.claude-3-opus-20240229-v1:0',
+            'name': 'Claude 3 Opus',
+            'provider': 'Anthropic'
+        },
+        {
+            'id': 'anthropic.claude-v2:1',
+            'name': 'Claude 2.1',
+            'provider': 'Anthropic'
+        },
+        {
+            'id': 'meta.llama3-70b-instruct-v1:0',
+            'name': 'Llama 3 70B',
+            'provider': 'Meta'
+        }
+    ]
+    return jsonify(models)
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    """Health check endpoint"""
+    return jsonify({'status': 'healthy', 'service': 'Bedrock Chat'})
+
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=port, debug=debug)
