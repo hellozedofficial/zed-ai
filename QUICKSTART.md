@@ -21,7 +21,7 @@
 ```bash
 AWS_ACCESS_KEY_ID=আপনার_access_key
 AWS_SECRET_ACCESS_KEY=আপনার_secret_key
-AWS_REGION=us-east-1
+AWS_REGION=eu-north-1
 ```
 
 ### ৩. অ্যাপ্লিকেশন চালান

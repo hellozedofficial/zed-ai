@@ -50,7 +50,7 @@ REQUEST_TIMEOUT=30
 # AWS Security
 AWS_ACCESS_KEY_ID=your_aws_access_key_here
 AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key_here
-AWS_REGION=us-east-1
+AWS_REGION=eu-north-1
 ```
 
 ### Production Recommendations

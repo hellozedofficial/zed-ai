@@ -209,7 +209,7 @@ messages (id, session_id, role, content, created_at)
 try:
     bedrock_runtime = boto3.client(
         service_name='bedrock-runtime',
-        region_name=os.getenv('AWS_REGION', 'us-east-1'),
+        region_name=os.getenv('AWS_REGION', 'eu-north-1'),
         aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
         aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
     )
@@ -251,7 +251,7 @@ DB_PASSWORD=
 # AWS configuration  
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
-AWS_REGION=us-east-1
+AWS_REGION=eu-north-1
 
 # Application settings
 SECRET_KEY=your_secret_key
