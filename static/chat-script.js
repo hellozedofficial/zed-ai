@@ -351,21 +351,46 @@ function addMessage(content, role) {
 
 // Format message
 function formatMessage(content) {
-    // Convert markdown code blocks with execution buttons
+    // Remove AI thinking/reasoning patterns (text before actual answer)
+    // Patterns: <reasoning>...</reasoning>, "User wants...", "The user...", etc.
+    content = content.replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '');
+    content = content.replace(/^(User |The user |They ).*?\. (We|I) should.*?\n\n/gim, '');
+    content = content.replace(/^.*?(User wants|They want|The user).*?\n\n/gim, '');
+    
+    // Store code blocks temporarily to prevent markdown parsing
+    const codeBlocks = [];
     content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-        const trimmedCode = code.trim();
+        const index = codeBlocks.length;
+        codeBlocks.push({ lang: lang || 'text', code: code.trim() });
+        return `__CODE_BLOCK_${index}__`;
+    });
+    
+    // Configure marked for better rendering
+    if (typeof marked !== 'undefined') {
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: false,
+            mangle: false
+        });
+        content = marked.parse(content);
+    }
+    
+    // Restore code blocks with execution buttons
+    content = content.replace(/__CODE_BLOCK_(\d+)__/g, (match, index) => {
+        const { lang, code } = codeBlocks[parseInt(index)];
         const language = lang || 'text';
         const canExecute = language === 'python' || language === 'javascript' || language === 'js';
         
         const executeBtn = canExecute ? 
-            `<button class="code-execute-btn" onclick="executeCode('${escapeForAttribute(trimmedCode)}', '${language === 'js' ? 'javascript' : language}')">
+            `<button class="code-execute-btn" onclick="executeCode('${escapeForAttribute(code)}', '${language === 'js' ? 'javascript' : language}')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
                 Run Code
             </button>` : '';
         
-        const copyBtn = `<button class="code-copy-btn" onclick="copyCode('${escapeForAttribute(trimmedCode)}')">
+        const copyBtn = `<button class="code-copy-btn" onclick="copyCode('${escapeForAttribute(code)}')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -381,25 +406,9 @@ function formatMessage(content) {
                     ${executeBtn}
                 </div>
             </div>
-            <pre><code>${escapeHtml(trimmedCode)}</code></pre>
+            <pre><code>${escapeHtml(code)}</code></pre>
         </div>`;
     });
-    
-    // Convert inline code
-    content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
-    
-    // Convert bold
-    content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    
-    // Convert italic
-    content = content.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    
-    // Convert line breaks to paragraphs
-    const paragraphs = content.split('\n\n');
-    content = paragraphs.map(p => {
-        if (p.startsWith('<div class="code-block">')) return p;
-        return `<p>${p.replace(/\n/g, '<br>')}</p>`;
-    }).join('');
     
     return content;
 }

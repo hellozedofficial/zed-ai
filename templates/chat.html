@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='chat-style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -144,21 +145,17 @@
                     <p>How can I help you today?</p>
                     
                     <div class="example-prompts">
-                        <div class="example-prompt" onclick="useExample('Explain quantum computing in simple terms')">
-                            <h4>Science</h4>
-                            <p>Explain quantum computing in simple terms</p>
+                        <div class="example-prompt" onclick="useExample('Write a Python function to reverse a string')">
+                            <h4>Code</h4>
+                            <p>Write a Python function to reverse a string</p>
                         </div>
-                        <div class="example-prompt" onclick="useExample('Write a Python function to sort a list')">
-                            <h4>Programming</h4>
-                            <p>Write a Python function to sort a list</p>
+                        <div class="example-prompt" onclick="useExample('Explain AI in 3 simple points')">
+                            <h4>Learn</h4>
+                            <p>Explain AI in 3 simple points</p>
                         </div>
-                        <div class="example-prompt" onclick="useExample('What are the key principles of good UI design?')">
-                            <h4>Design</h4>
-                            <p>What are the key principles of good UI design?</p>
-                        </div>
-                        <div class="example-prompt" onclick="useExample('Explain the concept of machine learning')">
-                            <h4>Technology</h4>
-                            <p>Explain the concept of machine learning</p>
+                        <div class="example-prompt" onclick="useExample('Help me write a professional email')">
+                            <h4>Write</h4>
+                            <p>Help me write a professional email</p>
                         </div>
                     </div>
                 </div>

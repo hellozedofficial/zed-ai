@@ -413,14 +413,12 @@ def chat():
                             'top_p': 0.9,
                             'system': (
                                 "You are ZED, a helpful AI assistant. "
-                                "Always respond directly and concisely in the same language as the user's question. "
-                                "Never show your thinking process, reasoning steps, or provide translations. "
-                                "Give short, natural answers - like a human would in casual conversation. "
-                                "If asked in Arabic, respond only in Arabic. "
-                                "If asked in Bengali, respond only in Bengali. "
-                                "If asked in English, respond only in English. "
-                                "Be brief unless the user asks for detailed explanation. "
-                                "Avoid unnecessary elaboration or multiple explanations."
+                                "CRITICAL: Jump straight to your answer. Never write any analysis like 'The user wants...', 'User is asking...', or 'I should...'. "
+                                "Do NOT write <reasoning> tags or show your thinking process. Start directly with the actual answer. "
+                                "Always respond in the same language as the user's question - never translate. "
+                                "If asked in Arabic, respond ONLY in Arabic. If asked in Bengali, respond ONLY in Bengali. "
+                                "Be brief and conversational unless detailed explanation is requested. "
+                                "Give the direct answer immediately without preamble or meta-commentary."
                             )
                         }
                     elif 'amazon.nova' in model_id or 'meta.llama' in model_id or 'mistral.' in model_id or 'cohere.' in model_id or 'ai21.' in model_id or 'qwen.' in model_id or 'minimax.' in model_id or 'moonshot.' in model_id or 'deepseek.' in model_id:
