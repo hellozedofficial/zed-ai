@@ -223,27 +223,47 @@ async function loadSession(sessionId, shareHash) {
     }
 }
 
-// Delete session
-async function deleteSession(event, sessionId) {
+// Delete session with modal
+let sessionToDelete = null;
+
+function deleteSession(event, sessionId) {
     event.stopPropagation();
-    
-    if (!confirm('Delete this conversation?')) return;
+    sessionToDelete = sessionId;
+    document.getElementById('deleteModal').classList.add('show');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+    sessionToDelete = null;
+}
+
+async function confirmDelete() {
+    if (!sessionToDelete) return;
     
     try {
-        const response = await fetch(`/api/sessions/${sessionId}`, {
+        const response = await fetch(`/api/sessions/${sessionToDelete}`, {
             method: 'DELETE'
         });
         
         if (response.ok) {
-            if (currentSessionId === sessionId) {
+            if (currentSessionId === sessionToDelete) {
                 startNewChat();
             }
             await loadSessions();
         }
     } catch (error) {
         console.error('Failed to delete session:', error);
+    } finally {
+        closeDeleteModal();
     }
 }
+
+// Close modal on background click
+document.addEventListener('click', (e) => {
+    if (e.target.id === 'deleteModal') {
+        closeDeleteModal();
+    }
+});
 
 // Handle logout
 async function handleLogout() {
