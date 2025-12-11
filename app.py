@@ -18,6 +18,11 @@ from botocore.exceptions import ClientError, NoCredentialsError
 from dotenv import load_dotenv
 from database import get_db_connection, init_database, generate_share_hash
 from googleapiclient.discovery import build
+from lemonsqueezy import (
+    LemonSqueezyService, UsageTracker, 
+    create_checkout_session, check_user_quota, 
+    log_api_usage, get_user_usage_stats
+)
 
 # Load environment variables
 load_dotenv()
@@ -320,6 +325,15 @@ def get_user():
 def chat():
     """Handle chat requests"""
     try:
+        # Check quota before processing
+        quota_check = check_user_quota(current_user.id)
+        if not quota_check.get('allowed', False):
+            return jsonify({
+                'error': quota_check.get('message', 'Quota exceeded'),
+                'quota_exceeded': True,
+                'quota_info': quota_check
+            }), 429
+        
         data = request.get_json()
         user_message = data.get('message', '').strip()
         session_id = data.get('session_id')
@@ -520,10 +534,17 @@ def chat():
                 )
                 connection.commit()
                 
+                # Log usage for billing
+                log_api_usage(current_user.id, 'chat')
+                
+                # Get updated quota info
+                quota_info = check_user_quota(current_user.id)
+                
                 return jsonify({
                     'response': assistant_message,
                     'session_id': session_id,
-                    'model': model_id
+                    'model': model_id,
+                    'quota_info': quota_info
                 })
                 
         finally:
@@ -812,6 +833,201 @@ def get_models():
 def health():
     """Health check endpoint"""
     return jsonify({'status': 'healthy', 'service': 'ZED Chat'})
+
+# ============================================================================
+# BILLING & SUBSCRIPTION ROUTES
+# ============================================================================
+
+@app.route('/api/billing/pricing', methods=['GET'])
+def get_pricing():
+    """Get pricing information"""
+    return jsonify({
+        'plans': [
+            {
+                'name': 'Free',
+                'price': 0,
+                'monthly_requests': int(os.getenv('FREE_PLAN_MONTHLY_LIMIT', '50')),
+                'features': [
+                    'Limited requests per month',
+                    'Basic AI features',
+                    'Chrome extension access'
+                ]
+            },
+            {
+                'name': 'Pro',
+                'price': float(os.getenv('PRO_PLAN_PRICE', '9.99')),
+                'monthly_requests': int(os.getenv('PRO_PLAN_INCLUDED_REQUESTS', '2000')),
+                'features': [
+                    '2000 requests included',
+                    'Full AI features access',
+                    'Priority API speed',
+                    'Auto-fill form assistant',
+                    'Page summarization',
+                    'Overage billing available'
+                ],
+                'overage_rate': float(os.getenv('OVERAGE_RATE_PER_REQUEST', '0.01'))
+            }
+        ]
+    })
+
+@app.route('/api/billing/checkout', methods=['POST'])
+@login_required
+def create_checkout():
+    """Create LemonSqueezy checkout session"""
+    try:
+        result = create_checkout_session(current_user.id, current_user.email)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'checkout_url': result['checkout_url']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Failed to create checkout')
+            }), 400
+    except Exception as e:
+        logger.error(f"Checkout creation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/billing/portal', methods=['GET'])
+@login_required
+def customer_portal():
+    """Get customer portal URL for subscription management"""
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT lemonsqueezy_customer_id 
+                FROM users WHERE id = %s
+            """, (current_user.id,))
+            
+            user = cursor.fetchone()
+            
+            if not user or not user['lemonsqueezy_customer_id']:
+                return jsonify({
+                    'success': False,
+                    'error': 'No active subscription found'
+                }), 404
+            
+            service = LemonSqueezyService()
+            portal_url = service.get_customer_portal_url(user['lemonsqueezy_customer_id'])
+            
+            if portal_url:
+                return jsonify({
+                    'success': True,
+                    'portal_url': portal_url
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to get portal URL'
+                }), 500
+    finally:
+        connection.close()
+
+@app.route('/api/billing/usage', methods=['GET'])
+@login_required
+def get_usage():
+    """Get current usage statistics"""
+    try:
+        stats = get_user_usage_stats(current_user.id)
+        
+        if stats:
+            return jsonify({
+                'success': True,
+                'usage': stats
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to fetch usage data'
+            }), 500
+    except Exception as e:
+        logger.error(f"Usage fetch error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/billing/quota', methods=['GET'])
+@login_required
+def check_quota():
+    """Check user's current quota status"""
+    try:
+        quota_info = check_user_quota(current_user.id)
+        return jsonify(quota_info)
+    except Exception as e:
+        logger.error(f"Quota check error: {e}")
+        return jsonify({'allowed': False, 'error': str(e)}), 500
+
+@app.route('/api/billing/settings', methods=['PUT'])
+@login_required
+def update_billing_settings():
+    """Update billing preferences"""
+    data = request.get_json()
+    
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            updates = []
+            params = []
+            
+            if 'overage_enabled' in data:
+                updates.append('overage_enabled = %s')
+                params.append(data['overage_enabled'])
+            
+            if 'auto_stop_at_limit' in data:
+                updates.append('auto_stop_at_limit = %s')
+                params.append(data['auto_stop_at_limit'])
+            
+            if updates:
+                params.append(current_user.id)
+                query = f"UPDATE users SET {', '.join(updates)} WHERE id = %s"
+                cursor.execute(query, params)
+                connection.commit()
+                
+                return jsonify({'success': True})
+            else:
+                return jsonify({'success': False, 'error': 'No valid fields to update'}), 400
+    except Exception as e:
+        connection.rollback()
+        logger.error(f"Settings update error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        connection.close()
+
+@app.route('/api/webhooks/lemonsqueezy', methods=['POST'])
+def lemonsqueezy_webhook():
+    """Handle LemonSqueezy webhooks"""
+    # Verify webhook signature
+    signature = request.headers.get('X-Signature')
+    
+    if not signature:
+        return jsonify({'error': 'Missing signature'}), 401
+    
+    service = LemonSqueezyService()
+    
+    if not service.verify_webhook_signature(request.data, signature):
+        return jsonify({'error': 'Invalid signature'}), 401
+    
+    # Process the webhook
+    event_data = request.get_json()
+    result = service.process_webhook_event(event_data)
+    
+    if result['success']:
+        return jsonify({'success': True}), 200
+    else:
+        return jsonify(result), 400
+
+@app.route('/pricing')
+def pricing_page():
+    """Render pricing page"""
+    return render_template('pricing.html')
+
+@app.route('/billing')
+@login_required
+def billing_dashboard():
+    """Render billing dashboard"""
+    return render_template('billing.html')
 
 if __name__ == '__main__':
     # Initialize database

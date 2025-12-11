@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - ZED AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .pricing-container {
+            max-width: 1200px;
+            margin: 80px auto;
+            padding: 40px 20px;
+        }
+
+        .pricing-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .pricing-header h1 {
+            font-family: 'Newsreader', 'Georgia', serif;
+            font-size: 48px;
+            color: #EBD5AB;
+            margin-bottom: 20px;
+        }
+
+        .pricing-header p {
+            font-size: 18px;
+            color: rgba(235, 213, 171, 0.7);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .pricing-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .pricing-card {
+            background: rgba(27, 33, 26, 0.95);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(139, 174, 102, 0.2);
+            border-radius: 16px;
+            padding: 40px;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(139, 174, 102, 0.4);
+            box-shadow: 0 20px 60px rgba(139, 174, 102, 0.2);
+        }
+
+        .pricing-card.featured {
+            border-color: #8BAE66;
+            box-shadow: 0 10px 40px rgba(139, 174, 102, 0.3);
+        }
+
+        .pricing-card.featured::before {
+            content: 'RECOMMENDED';
+            position: absolute;
+            top: -12px;
+            right: 40px;
+            background: linear-gradient(135deg, #628141 0%, #8BAE66 100%);
+            color: #1B211A;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .plan-name {
+            font-family: 'Newsreader', 'Georgia', serif;
+            font-size: 28px;
+            color: #EBD5AB;
+            margin-bottom: 12px;
+        }
+
+        .plan-price {
+            font-size: 48px;
+            color: #8BAE66;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .plan-price span {
+            font-size: 18px;
+            color: rgba(235, 213, 171, 0.6);
+        }
+
+        .plan-requests {
+            color: rgba(235, 213, 171, 0.7);
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .plan-features {
+            list-style: none;
+            padding: 0;
+            margin: 30px 0;
+        }
+
+        .plan-features li {
+            padding: 12px 0;
+            color: rgba(235, 213, 171, 0.8);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .plan-features li::before {
+            content: '✓';
+            color: #8BAE66;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .overage-info {
+            background: rgba(139, 174, 102, 0.1);
+            border: 1px solid rgba(139, 174, 102, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+
+        .overage-info p {
+            color: rgba(235, 213, 171, 0.7);
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .cta-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #628141 0%, #8BAE66 100%);
+            color: #1B211A;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Newsreader', 'Georgia', serif;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 30px;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(139, 174, 102, 0.4);
+        }
+
+        .cta-button.secondary {
+            background: rgba(139, 174, 102, 0.1);
+            color: #8BAE66;
+            border: 1px solid rgba(139, 174, 102, 0.3);
+        }
+
+        .faq-section {
+            max-width: 800px;
+            margin: 80px auto 40px;
+        }
+
+        .faq-section h2 {
+            font-family: 'Newsreader', 'Georgia', serif;
+            font-size: 36px;
+            color: #EBD5AB;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .faq-item {
+            background: rgba(27, 33, 26, 0.95);
+            border: 1px solid rgba(139, 174, 102, 0.2);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .faq-item h3 {
+            color: #8BAE66;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .faq-item p {
+            color: rgba(235, 213, 171, 0.8);
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="pricing-container">
+        <div class="pricing-header">
+            <h1>Choose Your Plan</h1>
+            <p>Start for free, upgrade when you need more power. Fair, transparent pricing with no hidden fees.</p>
+        </div>
+
+        <div class="pricing-cards">
+            <!-- Free Plan -->
+            <div class="pricing-card">
+                <div class="plan-name">Free</div>
+                <div class="plan-price">$0<span>/month</span></div>
+                <div class="plan-requests">50 requests per month</div>
+                
+                <ul class="plan-features">
+                    <li>Limited requests per month</li>
+                    <li>Basic AI features</li>
+                    <li>Chrome extension access</li>
+                    <li>Page summarization</li>
+                    <li>Community support</li>
+                </ul>
+                
+                <button class="cta-button secondary" onclick="window.location.href='/'">Get Started</button>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="pricing-card featured">
+                <div class="plan-name">Pro</div>
+                <div class="plan-price">$9.99<span>/month</span></div>
+                <div class="plan-requests">2,000 requests included</div>
+                
+                <ul class="plan-features">
+                    <li>2,000 requests included monthly</li>
+                    <li>Full AI features access</li>
+                    <li>Priority API speed</li>
+                    <li>Auto-fill form assistant</li>
+                    <li>Advanced page analysis</li>
+                    <li>Email support</li>
+                    <li>Pay-as-you-go overage available</li>
+                </ul>
+                
+                <div class="overage-info">
+                    <p><strong>Overage:</strong> $0.01 per additional request after 2,000. Fair usage billing only for what you use.</p>
+                </div>
+                
+                <button class="cta-button" onclick="subscribeToPro()">Upgrade to Pro</button>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="faq-section">
+            <h2>Frequently Asked Questions</h2>
+            
+            <div class="faq-item">
+                <h3>How does overage billing work?</h3>
+                <p>Once you exceed your monthly 2,000 request limit on the Pro plan, you'll be charged $0.01 per additional request. This ensures you never run out of access while keeping costs predictable and fair.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3>Can I disable overage billing?</h3>
+                <p>Yes! You can toggle overage billing in your account settings. When disabled, requests will stop once you hit your monthly limit.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3>What counts as a request?</h3>
+                <p>Each action that uses AI counts as one request: chat messages, page summarization, form auto-fill, explanations, and website analysis.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3>Can I cancel anytime?</h3>
+                <p>Absolutely. Cancel anytime from your billing dashboard. You'll keep Pro access until the end of your billing period.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3>Do you offer refunds?</h3>
+                <p>We offer a 7-day money-back guarantee. If you're not satisfied, contact support for a full refund.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function subscribeToPro() {
+            try {
+                const response = await fetch('/api/billing/checkout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.checkout_url) {
+                    window.location.href = data.checkout_url;
+                } else if (response.status === 401) {
+                    // Not logged in
+                    alert('Please log in first to subscribe');
+                    window.location.href = '/auth';
+                } else {
+                    alert('Failed to create checkout. Please try again.');
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                alert('An error occurred. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing & Usage - ZED AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .billing-container {
+            max-width: 1000px;
+            margin: 60px auto;
+            padding: 20px;
+        }
+
+        .billing-header {
+            margin-bottom: 40px;
+        }
+
+        .billing-header h1 {
+            font-family: 'Newsreader', 'Georgia', serif;
+            font-size: 36px;
+            color: #EBD5AB;
+            margin-bottom: 8px;
+        }
+
+        .billing-header p {
+            color: rgba(235, 213, 171, 0.7);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: rgba(27, 33, 26, 0.95);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(139, 174, 102, 0.2);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .card h2 {
+            font-family: 'Newsreader', 'Georgia', serif;
+            font-size: 18px;
+            color: rgba(235, 213, 171, 0.7);
+            margin-bottom: 16px;
+        }
+
+        .usage-bar-container {
+            margin: 20px 0;
+        }
+
+        .usage-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: rgba(235, 213, 171, 0.8);
+        }
+
+        .usage-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(139, 174, 102, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .usage-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #628141 0%, #8BAE66 100%);
+            transition: width 0.5s ease;
+            border-radius: 6px;
+        }
+
+        .usage-bar-fill.warning {
+            background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+        }
+
+        .usage-bar-fill.danger {
+            background: linear-gradient(90deg, #dc2626 0%, #f87171 100%);
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #8BAE66;
+            margin: 12px 0;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: rgba(235, 213, 171, 0.6);
+        }
+
+        .breakdown-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(139, 174, 102, 0.1);
+        }
+
+        .breakdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: 'Newsreader', 'Georgia', serif;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            flex: 1;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #628141 0%, #8BAE66 100%);
+            color: #1B211A;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(139, 174, 102, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(139, 174, 102, 0.1);
+            color: #8BAE66;
+            border: 1px solid rgba(139, 174, 102, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(139, 174, 102, 0.2);
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: rgba(139, 174, 102, 0.05);
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+
+        .toggle-switch input[type="checkbox"] {
+            width: 48px;
+            height: 24px;
+            appearance: none;
+            background: rgba(139, 174, 102, 0.2);
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked {
+            background: #8BAE66;
+        }
+
+        .toggle-switch input[type="checkbox"]::before {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked::before {
+            transform: translateX(24px);
+        }
+
+        .alert {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fbbf24;
+        }
+
+        .alert-danger {
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            color: #f87171;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: rgba(235, 213, 171, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="billing-container">
+        <div class="billing-header">
+            <h1>Billing & Usage</h1>
+            <p>Monitor your AI usage and manage your subscription</p>
+        </div>
+
+        <div id="loading" class="loading">
+            Loading your usage data...
+        </div>
+
+        <div id="content" style="display: none;">
+            <div id="alerts"></div>
+
+            <div class="dashboard-grid">
+                <!-- Current Plan -->
+                <div class="card">
+                    <h2>Current Plan</h2>
+                    <div class="metric-value" id="planName">-</div>
+                    <div class="metric-label">Active subscription</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" id="manageBtn" style="display: none;">Manage Subscription</button>
+                        <button class="btn btn-primary" id="upgradeBtn" style="display: none;">Upgrade to Pro</button>
+                    </div>
+                </div>
+
+                <!-- Usage This Month -->
+                <div class="card">
+                    <h2>Requests This Month</h2>
+                    <div class="metric-value"><span id="usedRequests">0</span> / <span id="totalQuota">0</span></div>
+                    <div class="metric-label"><span id="remainingRequests">0</span> remaining</div>
+                </div>
+
+                <!-- Estimated Bill -->
+                <div class="card" id="billCard" style="display: none;">
+                    <h2>Estimated Bill</h2>
+                    <div class="metric-value">$<span id="estimatedBill">0.00</span></div>
+                    <div class="metric-label">For current period</div>
+                    <div style="margin-top: 12px; font-size: 14px; color: rgba(235, 213, 171, 0.6);">
+                        Base: $9.99 + Overage: $<span id="overageCost">0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Progress Bar -->
+            <div class="card">
+                <h2>Usage Progress</h2>
+                <div class="usage-bar-container">
+                    <div class="usage-stats">
+                        <span><span id="percentageUsed">0</span>% used</span>
+                        <span id="periodEnd">-</span>
+                    </div>
+                    <div class="usage-bar">
+                        <div class="usage-bar-fill" id="usageBarFill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Breakdown -->
+            <div class="card">
+                <h2>Usage Breakdown</h2>
+                <ul class="breakdown-list" id="breakdownList">
+                    <!-- Populated by JavaScript -->
+                </ul>
+            </div>
+
+            <!-- Settings -->
+            <div class="card">
+                <h2>Billing Settings</h2>
+                
+                <div class="toggle-switch">
+                    <div>
+                        <div style="color: #EBD5AB; margin-bottom: 4px;">Enable Overage Billing</div>
+                        <div style="font-size: 14px; color: rgba(235, 213, 171, 0.6);">Continue usage after quota limit</div>
+                    </div>
+                    <input type="checkbox" id="overageToggle">
+                </div>
+
+                <div class="toggle-switch">
+                    <div>
+                        <div style="color: #EBD5AB; margin-bottom: 4px;">Auto-stop at Limit</div>
+                        <div style="font-size: 14px; color: rgba(235, 213, 171, 0.6);">Block requests when quota exceeded</div>
+                    </div>
+                    <input type="checkbox" id="autoStopToggle">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUsage = null;
+
+        async function loadUsageData() {
+            try {
+                const response = await fetch('/api/billing/usage', {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load usage data');
+                }
+
+                const data = await response.json();
+                currentUsage = data.usage;
+                
+                updateUI(currentUsage);
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading usage:', error);
+                document.getElementById('loading').innerHTML = 'Failed to load usage data. Please refresh the page.';
+            }
+        }
+
+        function updateUI(usage) {
+            // Plan info
+            document.getElementById('planName').textContent = usage.plan || 'Free';
+            
+            // Show appropriate buttons
+            if (usage.status === 'pro') {
+                document.getElementById('manageBtn').style.display = 'block';
+                document.getElementById('billCard').style.display = 'block';
+            } else {
+                document.getElementById('upgradeBtn').style.display = 'block';
+            }
+
+            // Usage stats
+            document.getElementById('usedRequests').textContent = usage.used || 0;
+            document.getElementById('totalQuota').textContent = usage.quota || 0;
+            document.getElementById('remainingRequests').textContent = usage.remaining || 0;
+            
+            // Usage bar
+            const percentage = Math.min(100, usage.percentage || 0);
+            document.getElementById('percentageUsed').textContent = percentage.toFixed(1);
+            
+            const barFill = document.getElementById('usageBarFill');
+            barFill.style.width = percentage + '%';
+            
+            if (percentage >= 100) {
+                barFill.classList.add('danger');
+            } else if (percentage >= 80) {
+                barFill.classList.add('warning');
+            }
+
+            // Billing period
+            if (usage.period_end) {
+                const endDate = new Date(usage.period_end);
+                document.getElementById('periodEnd').textContent = 'Resets ' + endDate.toLocaleDateString();
+            }
+
+            // Estimated bill
+            if (usage.estimated_bill) {
+                document.getElementById('estimatedBill').textContent = usage.estimated_bill.toFixed(2);
+                document.getElementById('overageCost').textContent = usage.overage_cost.toFixed(2);
+            }
+
+            // Usage breakdown
+            const breakdownList = document.getElementById('breakdownList');
+            breakdownList.innerHTML = '';
+            
+            if (usage.breakdown && usage.breakdown.length > 0) {
+                usage.breakdown.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'breakdown-item';
+                    li.innerHTML = `
+                        <span style="color: #EBD5AB; text-transform: capitalize;">${item.action_type}</span>
+                        <span style="color: #8BAE66; font-weight: 600;">${item.count} requests</span>
+                    `;
+                    breakdownList.appendChild(li);
+                });
+            } else {
+                breakdownList.innerHTML = '<li class="breakdown-item"><span style="color: rgba(235, 213, 171, 0.5);">No usage this period</span></li>';
+            }
+
+            // Settings
+            document.getElementById('overageToggle').checked = usage.overage_enabled || false;
+            document.getElementById('autoStopToggle').checked = usage.auto_stop_at_limit || false;
+
+            // Show warnings
+            showWarnings(usage);
+        }
+
+        function showWarnings(usage) {
+            const alertsDiv = document.getElementById('alerts');
+            alertsDiv.innerHTML = '';
+
+            if (usage.percentage >= 100 && usage.overage_requests > 0) {
+                alertsDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>Overage Usage:</strong> You've used ${usage.overage_requests} requests beyond your quota. 
+                        Additional charges: $${usage.overage_cost.toFixed(2)}
+                    </div>
+                `;
+            } else if (usage.percentage >= 80) {
+                alertsDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>Usage Warning:</strong> You've used ${usage.percentage.toFixed(1)}% of your monthly quota.
+                    </div>
+                `;
+            }
+
+            if (usage.status === 'past_due') {
+                alertsDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Payment Failed:</strong> Please update your payment method to continue using Pro features.
+                    </div>
+                ` + alertsDiv.innerHTML;
+            }
+        }
+
+        // Event listeners
+        document.getElementById('upgradeBtn')?.addEventListener('click', () => {
+            window.location.href = '/pricing';
+        });
+
+        document.getElementById('manageBtn')?.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/billing/portal', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.success && data.portal_url) {
+                    window.location.href = data.portal_url;
+                } else {
+                    alert('Failed to open billing portal');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred');
+            }
+        });
+
+        document.getElementById('overageToggle').addEventListener('change', async (e) => {
+            await updateSettings({ overage_enabled: e.target.checked });
+        });
+
+        document.getElementById('autoStopToggle').addEventListener('change', async (e) => {
+            await updateSettings({ auto_stop_at_limit: e.target.checked });
+        });
+
+        async function updateSettings(settings) {
+            try {
+                const response = await fetch('/api/billing/settings', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(settings)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update settings');
+                }
+
+                // Reload usage data to reflect changes
+                await loadUsageData();
+            } catch (error) {
+                console.error('Error updating settings:', error);
+                alert('Failed to update settings');
+            }
+        }
+
+        // Load data on page load
+        loadUsageData();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadUsageData, 30000);
+    </script>
+</body>
+</html>
