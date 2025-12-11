@@ -165,12 +165,51 @@ class LemonSqueezyService:
         subscription_data = event_data.get('data', {})
         attributes = subscription_data.get('attributes', {})
         
-        # Extract custom data
+        # Extract user_id from multiple possible locations
+        user_id = None
+        
+        # Try 1: From custom_data in attributes
         custom_data = attributes.get('custom_data', {})
-        user_id = custom_data.get('user_id')
+        if custom_data and isinstance(custom_data, dict):
+            user_id = custom_data.get('user_id')
+        
+        # Try 2: From meta custom_data
+        if not user_id:
+            meta_custom = event_data.get('meta', {}).get('custom_data', {})
+            if meta_custom and isinstance(meta_custom, dict):
+                user_id = meta_custom.get('user_id')
+        
+        # Try 3: Find user by email
+        if not user_id:
+            user_email = attributes.get('user_email') or attributes.get('customer_email')
+            if user_email:
+                connection = get_db_connection()
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT id FROM users WHERE email = %s", (user_email,))
+                        user_data = cursor.fetchone()
+                        if user_data:
+                            user_id = user_data['id']
+                finally:
+                    connection.close()
+        
+        # Try 4: Find user by lemonsqueezy_customer_id
+        if not user_id:
+            customer_id = attributes.get('customer_id')
+            if customer_id:
+                connection = get_db_connection()
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT id FROM users WHERE lemonsqueezy_customer_id = %s", (customer_id,))
+                        user_data = cursor.fetchone()
+                        if user_data:
+                            user_id = user_data['id']
+                finally:
+                    connection.close()
         
         if not user_id:
-            print("No user_id in webhook data")
+            error_msg = f"Could not find user_id. Email: {attributes.get('user_email')}, Customer ID: {attributes.get('customer_id')}"
+            print(error_msg)
             return {'success': False, 'error': 'Missing user_id'}
         
         connection = get_db_connection()
