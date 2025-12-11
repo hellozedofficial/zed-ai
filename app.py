@@ -36,10 +36,16 @@ app.config.update(
     SECRET_KEY=os.getenv('SECRET_KEY', 'dev-key-change-in-production'),
     MAX_CONTENT_LENGTH=16 * 1024 * 1024,
     JSON_AS_ASCII=False,
-    PERMANENT_SESSION_LIFETIME=timedelta(days=7)
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+    SESSION_COOKIE_SAMESITE='None',
+    SESSION_COOKIE_SECURE=False  # Set to True in production with HTTPS
 )
 
-CORS(app, supports_credentials=True)
+CORS(app, 
+     supports_credentials=True,
+     origins=['chrome-extension://*', 'http://localhost:*', 'http://127.0.0.1:*'],
+     allow_headers=['Content-Type', 'Authorization'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -432,9 +438,28 @@ def chat():
                             }
                         }
                     elif 'openai.gpt' in model_id or 'google.gemma' in model_id:
-                        # OpenAI and Google Gemma format
+                        # OpenAI and Google Gemma format - inject system prompt as first message
+                        system_prompt_messages = [
+                            {
+                                'role': 'user',
+                                'content': (
+                                    "You are ZED, a helpful AI assistant. "
+                                    "CRITICAL: Jump straight to your answer. Never write any analysis like 'The user wants...', 'User is asking...', or 'I should...'. "
+                                    "Do NOT write <reasoning> tags or show your thinking process. Start directly with the actual answer. "
+                                    "Always respond in the same language as the user's question - never translate. "
+                                    "If asked in Arabic, respond ONLY in Arabic. If asked in Bengali, respond ONLY in Bengali. "
+                                    "Be brief and conversational unless detailed explanation is requested. "
+                                    "Give the direct answer immediately without preamble or meta-commentary."
+                                )
+                            },
+                            {
+                                'role': 'assistant',
+                                'content': 'Understood. I will respond directly and concisely in the same language as the question.'
+                            }
+                        ] + messages
+                        
                         request_body = {
-                            'messages': messages,
+                            'messages': system_prompt_messages,
                             'max_tokens': 4096,
                             'temperature': 0.7,
                             'top_p': 0.9
