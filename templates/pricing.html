@@ -6,10 +6,16 @@
     <title>Pricing - ZED AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
+        body {
+            overflow-y: auto;
+            min-height: 100vh;
+        }
+        
         .pricing-container {
             max-width: 1200px;
             margin: 80px auto;
-            padding: 40px 20px;
+            padding: 40px 20px 80px;
+            min-height: calc(100vh - 160px);
         }
 
         .pricing-header {

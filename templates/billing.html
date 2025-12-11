@@ -6,10 +6,16 @@
     <title>Billing & Usage - ZED AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
+        body {
+            overflow-y: auto;
+            min-height: 100vh;
+        }
+        
         .billing-container {
             max-width: 1000px;
             margin: 60px auto;
-            padding: 20px;
+            padding: 20px 20px 80px;
+            min-height: calc(100vh - 120px);
         }
 
         .billing-header {

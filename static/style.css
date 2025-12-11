@@ -38,12 +38,13 @@ body {
     font-family: 'Newsreader', 'Georgia', 'Times New Roman', serif;
     background: linear-gradient(135deg, #1B211A 0%, #2a3328 100%);
     color: var(--text-primary);
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 .app-container {
     display: flex;
     height: 100vh;
+    overflow: hidden;
 }
 
 /* Sidebar Styles */
