@@ -264,6 +264,14 @@ class LemonSqueezyService:
     
     def _handle_subscription_created(self, cursor, user_id, attributes):
         """Handle new subscription creation"""
+        def _to_mysql_datetime(value):
+            if not value:
+                return None
+            try:
+                dt = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+                return dt.strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                return None
         cursor.execute("""
             UPDATE users 
             SET subscription_status = 'pro',
@@ -280,9 +288,9 @@ class LemonSqueezyService:
         """, (
             attributes.get('subscription_id'),
             attributes.get('customer_id'),
-            attributes.get('created_at'),
-            attributes.get('renews_at'),
-            attributes.get('ends_at'),
+            _to_mysql_datetime(attributes.get('created_at')),
+            _to_mysql_datetime(attributes.get('renews_at')),
+            _to_mysql_datetime(attributes.get('ends_at')),
             PRO_PLAN_INCLUDED_REQUESTS,
             datetime.now(),
             user_id
@@ -299,6 +307,14 @@ class LemonSqueezyService:
         }
         
         status = status_map.get(attributes.get('status'), 'free')
+        def _to_mysql_datetime(value):
+            if not value:
+                return None
+            try:
+                dt = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+                return dt.strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                return None
         
         cursor.execute("""
             UPDATE users 
@@ -308,8 +324,8 @@ class LemonSqueezyService:
             WHERE id = %s
         """, (
             status,
-            attributes.get('renews_at'),
-            attributes.get('ends_at'),
+            _to_mysql_datetime(attributes.get('renews_at')),
+            _to_mysql_datetime(attributes.get('ends_at')),
             user_id
         ))
     
@@ -333,6 +349,14 @@ class LemonSqueezyService:
     
     def _handle_payment_success(self, cursor, user_id, attributes):
         """Handle successful payment - reset quota"""
+        def _to_mysql_datetime(value):
+            if not value:
+                return None
+            try:
+                dt = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+                return dt.strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                return None
         cursor.execute("""
             UPDATE users 
             SET requests_used = 0,
@@ -340,7 +364,7 @@ class LemonSqueezyService:
                 current_period_start = %s,
                 current_period_end = %s
             WHERE id = %s
-        """, (datetime.now(), attributes.get('renews_at'), attributes.get('ends_at'), user_id))
+        """, (datetime.now(), _to_mysql_datetime(attributes.get('renews_at')), _to_mysql_datetime(attributes.get('ends_at')), user_id))
     
     def _handle_payment_failed(self, cursor, user_id, attributes):
         """Handle failed payment"""
