@@ -1,0 +1,74 @@
+{
+  "data": {
+    "id": "5381865",
+    "type": "subscription-invoices",
+    "links": {
+      "self": "https://api.lemonsqueezy.com/v1/subscription-invoices/5381865"
+    },
+    "attributes": {
+      "tax": 0,
+      "urls": {
+        "invoice_url": "https://app.lemonsqueezy.com/my-orders/ca0fbe03-2a5b-44c2-bd39-72f22d40aaa3/subscription-invoice/5381865?expires=1765676568&signature=d25a29d681673fc370db2ca4d1c6066b189fb0e8e62b532d29689b7b5f0c46a6"
+      },
+      "total": 999,
+      "status": "paid",
+      "tax_usd": 0,
+      "currency": "USD",
+      "refunded": false,
+      "store_id": 255588,
+      "subtotal": 999,
+      "test_mode": true,
+      "total_usd": 999,
+      "user_name": "Mamun Hasan Emon",
+      "card_brand": "visa",
+      "created_at": "2025-12-13T19:42:11.000000Z",
+      "updated_at": "2025-12-13T19:42:48.000000Z",
+      "user_email": "uesmhe@gmail.com",
+      "customer_id": 7360463,
+      "refunded_at": null,
+      "subtotal_usd": 999,
+      "currency_rate": "1.00000000",
+      "tax_formatted": "$0.00",
+      "tax_inclusive": false,
+      "billing_reason": "initial",
+      "card_last_four": "4242",
+      "discount_total": 0,
+      "refunded_amount": 0,
+      "subscription_id": 1717336,
+      "total_formatted": "$9.99",
+      "status_formatted": "Paid",
+      "discount_total_usd": 0,
+      "subtotal_formatted": "$9.99",
+      "refunded_amount_usd": 0,
+      "discount_total_formatted": "$0.00"
+    },
+    "relationships": {
+      "store": {
+        "links": {
+          "self": "https://api.lemonsqueezy.com/v1/subscription-invoices/5381865/relationships/store",
+          "related": "https://api.lemonsqueezy.com/v1/subscription-invoices/5381865/store"
+        }
+      },
+      "customer": {
+        "links": {
+          "self": "https://api.lemonsqueezy.com/v1/subscription-invoices/5381865/relationships/customer",
+          "related": "https://api.lemonsqueezy.com/v1/subscription-invoices/5381865/customer"
+        }
+      },
+      "subscription": {
+        "links": {
+          "self": "https://api.lemonsqueezy.com/v1/subscription-invoices/5381865/relationships/subscription",
+          "related": "https://api.lemonsqueezy.com/v1/subscription-invoices/5381865/subscription"
+        }
+      }
+    }
+  },
+  "meta": {
+    "test_mode": true,
+    "event_name": "subscription_payment_success",
+    "webhook_id": "a8c71ac4-0daa-4b11-ab8f-853823d7e7e2",
+    "custom_data": {
+      "user_id": "4"
+    }
+  }
+}

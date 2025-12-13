@@ -162,6 +162,8 @@ class LemonSqueezyService:
         - subscription_payment_failed
         """
         event_type = event_data.get('meta', {}).get('event_name')
+        # LemonSqueezy sends `webhook_id` (not `event_id`). Use it as our event identifier.
+        event_id = event_data.get('meta', {}).get('event_id') or event_data.get('meta', {}).get('webhook_id')
         subscription_data = event_data.get('data', {})
         attributes = subscription_data.get('attributes', {})
         
@@ -216,6 +218,7 @@ class LemonSqueezyService:
         try:
             with connection.cursor() as cursor:
                 # Log the webhook event
+                # Ensure lemonsqueezy_event_id is not NULL to satisfy DB constraint
                 cursor.execute("""
                     INSERT INTO subscription_events 
                     (user_id, event_type, subscription_id, lemonsqueezy_event_id, payload, processed)
@@ -224,7 +227,7 @@ class LemonSqueezyService:
                     user_id,
                     event_type,
                     subscription_data.get('id'),
-                    event_data.get('meta', {}).get('event_id'),
+                    event_id,
                     json.dumps(event_data),
                     False
                 ))
@@ -248,7 +251,7 @@ class LemonSqueezyService:
                     UPDATE subscription_events 
                     SET processed = TRUE 
                     WHERE lemonsqueezy_event_id = %s
-                """, (event_data.get('meta', {}).get('event_id'),))
+                """, (event_id,))
                 
             connection.commit()
             return {'success': True}
